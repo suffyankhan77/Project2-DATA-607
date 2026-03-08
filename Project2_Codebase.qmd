@@ -3,7 +3,7 @@ title: "Project 2 – Data Transformations: Codebase"
 author: "Muhammad Suffyan Khan"
 format: html
 editor: visual
-date: "03-05-2026"
+date: "03-08-2026"
 execute:
   echo: true
   warning: false
@@ -633,3 +633,4 @@ This project transformed three real-world datasets from wide format into tidy fo
 For the COVID-19 vaccination dataset, multiple vaccination measures were normalized into `metric` and `value` columns, making it possible to compare vaccination rates across countries and over time. For the renewable energy dataset, country and energy-type information embedded in column names were separated into explicit variables, allowing comparisons across technologies and countries. For the GDP dataset, yearly GDP columns were reshaped into a single `year` variable and a corresponding `gdp` value column, enabling cross-country economic trend analysis.
 
 Across all three cases, the tidy structure made the datasets easier to summarize, visualize, and interpret. This project demonstrates how reshaping wide data into tidy form is an essential step for reliable downstream analysis.
+
