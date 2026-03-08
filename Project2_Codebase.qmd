@@ -1,0 +1,635 @@
+---
+title: "Project 2 – Data Transformations: Codebase"
+author: "Muhammad Suffyan Khan"
+format: html
+editor: visual
+date: "03-05-2026"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# Introduction
+
+The objective of this project is to develop practical experience transforming wide-format datasets into tidy datasets suitable for analysis. In many real-world datasets, variables are spread across multiple columns, which makes analysis and visualization difficult. The tidy data principles described by Hadley Wickham recommend structuring datasets so that each variable forms a column, each observation forms a row, and each type of observational unit forms a table.
+
+Using the `tidyr` and `dplyr` packages in R, this project demonstrates how wide datasets can be transformed into tidy formats through reproducible data transformation pipelines. Each dataset is first preserved in its raw wide format and then converted into a tidy structure that can be used for analysis and visualization.
+
+Three independent datasets from Discussion 5A are used in this project:
+
+1.  COVID-19 World Vaccination Progress
+2.  Renewable Energy Capacity Time Series
+3.  World GDP by Country (1960–2022)
+
+Each dataset illustrates a different type of transformation scenario and allows meaningful analysis once the data is properly structured.
+
+# Dataset 1: COVID-19 World Vaccination Progress
+
+## Data Source
+
+Dataset: COVID World Vaccination Progress Source: Kaggle Link: https://www.kaggle.com/datasets/gpreda/covid-world-vaccination-progress
+
+This dataset contains vaccination statistics for countries around the world during the COVID-19 pandemic. The dataset includes multiple vaccination metrics such as total vaccinations, people vaccinated, people fully vaccinated, and daily vaccination rates.
+
+## Structure Before Tidying
+
+The dataset includes several vaccination-related variables stored as separate columns. While the dataset contains useful information, the structure spreads similar measurements across multiple columns instead of representing them as a single variable describing the type of vaccination metric.
+
+This structure is considered partially wide because the vaccination metrics represent the same type of measurement recorded across different variables.
+
+## Planned Transformation
+
+The transformation process will reshape the dataset by converting the vaccination metric columns into a single categorical variable describing the metric type, while storing the corresponding values in another column.
+
+This will be achieved using `pivot_longer()` from the `tidyr` package.
+
+The transformation will result in a tidy dataset with variables such as:
+
+-   country
+-   date
+-   metric
+-   value
+
+This structure allows easier filtering, grouping, and comparison across vaccination metrics.
+
+## Planned Analysis
+
+After tidying the dataset, the analysis will examine vaccination progress across different countries. Visualizations will be created to show how vaccination rates change over time and how countries compare in terms of vaccination coverage.
+
+Potential analysis includes:
+
+-   Comparing vaccination rates between countries
+-   Visualizing vaccination progress over time
+-   Identifying countries with higher vaccination coverage
+
+# Dataset 2: Renewable Energy Capacity Time Series
+
+## Data Source
+
+Dataset: Renewable Power Plants / Renewable Capacity Time Series Source: Kaggle Link: https://www.kaggle.com/datasets/eugeniyosetrov/renewable-power-plants
+
+This dataset contains power generation data for multiple renewable energy technologies across several European countries. The data includes values for different energy sources such as solar, wind, hydro, and other renewable technologies.
+
+## Structure Before Tidying
+
+The dataset is initially very wide. It includes columns representing different renewable energy sources as well as multiple columns representing different countries. The dataset also contains time series information representing energy generation across time.
+
+Because these variables are stored across multiple columns rather than as values in a single variable column, the dataset is not in tidy format.
+
+## Planned Transformation
+
+To tidy this dataset, the wide structure will be converted into a long format where:
+
+-   energy type becomes a categorical variable
+-   country becomes a variable
+-   generation values are stored in a single column
+-   time remains as an index variable
+
+This transformation will allow the dataset to be analyzed more easily using grouping and visualization tools.
+
+The main transformation will again use `pivot_longer()` to reshape the data.
+
+## Planned Analysis
+
+After tidying the data, the following analyses will be performed:
+
+-   Comparing renewable energy production across energy sources
+-   Comparing renewable energy output between countries
+-   Examining how renewable energy generation changes over time
+
+These analyses will help illustrate differences in renewable energy usage and trends across countries and technologies.
+
+# Dataset 3: World GDP by Country (1960–2022)
+
+## Data Source
+
+Dataset: World GDP by Country (1960–2022) Source: Kaggle Link: https://www.kaggle.com/datasets/annafabris/world-gdp-by-country-1960-2022
+
+This dataset contains the gross domestic product (GDP) values for many countries across multiple years. Each country has GDP values listed for many different years within the same row.
+
+## Structure Before Tidying
+
+The dataset stores each year as a separate column, which results in a wide structure. Instead of having a variable representing the year, the years appear as column names.
+
+For example:
+
+| Country | 1960  | 1961  | 1962  | 1963  | ... |
+|---------|-------|-------|-------|-------|-----|
+| USA     | value | value | value | value | ... |
+| France  | value | value | value | value | ... |
+| Japan   | value | value | value | value | ... |
+
+This format violates tidy data principles because the year variable is encoded as column headers rather than as a variable within the dataset.
+
+## Planned Transformation
+
+The dataset will be transformed into tidy format by converting the year columns into a single `year` variable and placing GDP values into a corresponding `gdp` column.
+
+This will be accomplished using `pivot_longer()`.
+
+The resulting tidy structure will resemble:
+
+| country \| year \| gdp \|
+
+This format allows the dataset to be easily analyzed and visualized using standard data analysis tools.
+
+## Planned Analysis
+
+Once the dataset is tidy, the analysis will focus on economic trends across countries.
+
+Possible analyses include:
+
+-   Comparing GDP growth between countries
+-   Calculating average GDP over time
+-   Identifying countries with the fastest economic growth
+-   Visualizing GDP trends using time series plots
+
+# Reproducibility Plan
+
+All data transformations and analyses will be implemented in a Quarto Markdown file using the `tidyr`, `dplyr`, and `ggplot2` packages in R.
+
+The workflow will follow these steps for each dataset:
+
+1.  Import the raw wide-format dataset from a CSV file.
+2.  Inspect the structure of the raw dataset.
+3.  Apply `pivot_longer()` and other `dplyr` transformations to create a tidy dataset.
+4.  Perform analysis using the tidy dataset.
+5.  Create summary tables and visualizations using `ggplot2`.
+
+All code will be fully reproducible and executable from a clean R session.
+
+# Expected Outcome
+
+By completing these transformations, the project will demonstrate how wide-format datasets commonly encountered in real-world data sources can be reshaped into tidy structures suitable for analysis.
+
+The resulting tidy datasets will allow more flexible analysis, easier visualization, and clearer interpretation of trends in vaccination progress, renewable energy generation, and economic growth across countries.
+
+# Code Part Starts Here
+
+```{r setup}
+library(tidyverse)
+library(scales)
+
+set.seed(607)
+
+theme_set(theme_minimal())
+```
+
+# Dataset 1 — COVID-19 World Vaccination Progress
+
+## Data Source
+
+Source: Kaggle, COVID World Vaccination Progress. Raw CSV used in this project:
+
+```{r}
+covid_url <- "https://raw.githubusercontent.com/suffyankhan77/Project2-DATA-607/refs/heads/main/country_vaccinations.csv"
+```
+
+## Data Structure Before Tidying
+
+```{r}
+covid_raw <- read_csv(covid_url)
+
+dim(covid_raw)
+names(covid_raw)
+glimpse(covid_raw)
+covid_raw %>% slice_head(n = 10)
+```
+
+The original dataset contains several vaccination measures stored in separate columns, such as `total_vaccinations`, `people_vaccinated`, `people_fully_vaccinated`, and related rate variables. This makes the dataset partially wide because similar measurements are spread across multiple columns instead of being represented as values in a single variable. To normalize this structure, these related measurement columns are reshaped into two variables: `metric` and `value`.
+
+## Data Import and Tidying
+
+```{r}
+covid_tidy <- covid_raw %>%
+  mutate(date = as.Date(date)) %>%
+  pivot_longer(
+    cols = c(
+      total_vaccinations,
+      people_vaccinated,
+      people_fully_vaccinated,
+      daily_vaccinations_raw,
+      daily_vaccinations,
+      total_vaccinations_per_hundred,
+      people_vaccinated_per_hundred,
+      people_fully_vaccinated_per_hundred,
+      daily_vaccinations_per_million
+    ),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  rename_with(tolower) %>%
+  mutate(metric = str_replace_all(metric, "_", " ")) %>%
+  filter(!is.na(value))
+
+glimpse(covid_tidy)
+covid_tidy %>% slice_head(n = 10)
+```
+
+### Missing and Inconsistent Value Handling
+
+For this dataset, missing values are common because countries report different vaccination measures on different dates. Rather than imputing values, I remove only rows where the reshaped `value` is missing after pivoting. This preserves reported observations while avoiding unsupported assumptions.
+
+```{r}
+covid_tidy %>%
+  summarise(
+    rows_after_tidying = n(),
+    countries = n_distinct(country),
+    metrics = n_distinct(metric),
+    date_min = min(date),
+    date_max = max(date)
+  )
+```
+
+## Analytical Method
+
+The original discussion focus was **vaccination rates across different countries**. To address that question using the tidy dataset, I first identify the latest available value of **people fully vaccinated per hundred** for each country. I then compare selected countries over time using a line chart to show how vaccination progress evolved during the reporting period.
+
+## Analysis
+
+```{r}
+covid_latest_full <- covid_tidy %>%
+  filter(metric == "people fully vaccinated per hundred") %>%
+  group_by(country) %>%
+  filter(date == max(date, na.rm = TRUE)) %>%
+  summarise(
+    latest_date = max(date),
+    fully_vaccinated_per_hundred = max(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(fully_vaccinated_per_hundred)) %>%
+  arrange(desc(fully_vaccinated_per_hundred))
+
+covid_latest_full %>% slice_head(n = 15)
+```
+
+The table above lists the countries with the highest latest reported values of people fully vaccinated per hundred. This provides a direct comparison of vaccination coverage across countries using the most recent available data.
+
+The following bar chart visualizes the top 10 countries by latest fully vaccinated rate.
+
+```{r}
+covid_latest_full %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(
+    x = reorder(country, fully_vaccinated_per_hundred),
+    y = fully_vaccinated_per_hundred
+  )) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Top 10 Countries by Latest Fully Vaccinated per 100 People",
+    x = "Country",
+    y = "People fully vaccinated per 100"
+  ) +
+  scale_y_continuous(labels = label_number())
+```
+
+This plot shows that vaccination coverage varied substantially across countries. Countries such as Gibraltar, Portugal, Singapore, and the United Arab Emirates appear among the highest values in the dataset. Some values approach or exceed 100 per hundred people, which may reflect reporting conventions, booster campaigns, or additional dose coverage in the source data.
+
+To examine vaccination progress over time, I also compare a small set of countries using the tidy dataset.
+
+```{r}
+selected_countries <- c("United States", "India", "United Kingdom", "Germany", "Brazil")
+
+covid_time_series <- covid_tidy %>%
+  filter(
+    metric == "people fully vaccinated per hundred",
+    country %in% selected_countries
+  )
+
+covid_time_series %>%
+  ggplot(aes(x = date, y = value, color = country)) +
+  geom_line(linewidth = 0.8) +
+  labs(
+    title = "Vaccination Progress Over Time",
+    subtitle = "People fully vaccinated per 100 people",
+    x = "Date",
+    y = "People fully vaccinated per 100",
+    color = "Country"
+  ) +
+  scale_y_continuous(labels = label_number())
+```
+
+This line chart shows how vaccination campaigns progressed over time for the selected countries. The slope of each line indicates the pace of vaccination rollout. Countries such as the United Kingdom and Germany increased quickly during the early phases, while India and Brazil showed slower initial progress before later increases.
+
+### Interpretation
+
+Using the tidy dataset, the analysis shows that vaccination coverage differs substantially across countries. The ranking of the latest fully vaccinated rates highlights which countries achieved broader coverage, while the time-series plot shows how vaccination campaigns progressed at different speeds across selected countries. Together, these outputs demonstrate how tidying the dataset makes cross-country comparison much easier.
+
+# Dataset 2 — Renewable Energy Capacity Time Series
+
+## Data Source
+
+Source: Kaggle, Renewable Power Plants / Renewable Capacity Time Series. Raw CSV used in this project:
+
+```{r}
+renewable_url <- "https://raw.githubusercontent.com/suffyankhan77/Project2-DATA-607/refs/heads/main/renewable_capacity_timeseries.csv"
+```
+
+## Data Structure Before Tidying
+
+```{r}
+renewable_raw <- read_csv(renewable_url)
+
+dim(renewable_raw)
+names(renewable_raw)
+glimpse(renewable_raw)
+renewable_raw %>% slice_head(n = 10)
+```
+
+The original dataset is wide because the renewable generation variables are stored as separate columns such as `CH_solar_capacity`, `DE_wind_capacity`, and `FR_hydro_capacity`. In this structure, both the country and the renewable energy type are embedded in the column names rather than represented as separate variables.
+
+## Data Import and Tidying
+
+```{r}
+renewable_tidy <- renewable_raw %>%
+  mutate(day = as.Date(day)) %>%
+  pivot_longer(
+    cols = -day,
+    names_to = "country_energy",
+    values_to = "capacity"
+  ) %>%
+  extract(
+    country_energy,
+    into = c("country_code", "energy_type"),
+    regex = "^(.*?)_(.*)_capacity$",
+    remove = TRUE
+  ) %>%
+  rename_with(tolower) %>%
+  mutate(
+    energy_type = str_replace_all(energy_type, "_", " "),
+    country_code = str_to_upper(country_code)
+  ) %>%
+  filter(!is.na(capacity))
+
+glimpse(renewable_tidy)
+renewable_tidy %>% slice_head(n = 10)
+```
+
+### Missing and Inconsistent Value Handling
+
+In this dataset, the main inconsistency is that country and energy type are encoded together in the original column names. I normalize this structure by extracting them into separate variables. Missing capacity values are removed after reshaping.
+
+The source dataset begins at `1900-01-01`, and I retain the date values as provided in the original file so that the transformation pipeline remains fully reproducible.
+
+```{r}
+renewable_tidy %>%
+  summarise(
+    rows_after_tidying = n(),
+    countries = n_distinct(country_code),
+    energy_types = n_distinct(energy_type),
+    start_date = min(day),
+    end_date = max(day)
+  )
+```
+
+## Analytical Method
+
+The original discussion suggested comparing renewable energy output across energy sources, across countries, and over time. To address this, I summarize total capacity by energy type, total capacity by country, and then aggregate daily totals by energy type to examine long-run time trends.
+
+## Analysis
+
+```{r}
+renewable_by_energy <- renewable_tidy %>%
+  group_by(energy_type) %>%
+  summarise(
+    total_capacity = sum(capacity, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_capacity))
+
+renewable_by_energy
+```
+
+The summary table above compares total renewable capacity across energy types.
+
+```{r}
+renewable_by_energy %>%
+  ggplot(aes(
+    x = reorder(energy_type, total_capacity),
+    y = total_capacity
+  )) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Total Renewable Capacity by Energy Type",
+    x = "Energy type",
+    y = "Total capacity"
+  ) +
+  scale_y_continuous(labels = label_comma())
+```
+
+This bar chart shows that wind related categories contribute the largest total capacity in the dataset. Solar and hydro also make large contributions, while geothermal and marine remain much smaller. This suggests that wind and solar are the dominant renewable technologies across the included countries.
+
+Next, I compare total renewable capacity across countries.
+
+```{r}
+renewable_by_country <- renewable_tidy %>%
+  group_by(country_code) %>%
+  summarise(
+    total_capacity = sum(capacity, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_capacity))
+
+renewable_by_country
+```
+
+The following plot compares the total renewable capacity of each country or region in the dataset.
+
+```{r}
+renewable_by_country %>%
+  ggplot(aes(
+    x = reorder(country_code, total_capacity),
+    y = total_capacity
+  )) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Total Renewable Capacity by Country Code",
+    x = "Country code",
+    y = "Total capacity"
+  ) +
+  scale_y_continuous(labels = label_comma())
+```
+
+This chart shows that Germany has the highest total renewable capacity in the dataset, followed by major United Kingdom regions. Countries or regions such as Switzerland and Northern Ireland contribute much smaller totals. These differences likely reflect varying levels of investment, infrastructure, and national renewable energy policy.
+
+Finally, I examine how major renewable energy categories evolve over time.
+
+```{r}
+renewable_over_time <- renewable_tidy %>%
+  group_by(day, energy_type) %>%
+  summarise(
+    total_capacity = sum(capacity, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+renewable_over_time %>%
+  ggplot(aes(x = day, y = total_capacity, color = energy_type)) +
+  geom_line(linewidth = 0.7) +
+  labs(
+    title = "Renewable Capacity Over Time by Energy Type",
+    x = "Date",
+    y = "Total capacity",
+    color = "Energy type"
+  ) +
+  scale_y_continuous(labels = label_comma())
+```
+
+This time-series plot shows how renewable capacity changes over time for each energy type. Wind and solar show strong upward growth patterns, which suggests expanded adoption of these technologies over time. Hydropower remains more stable, likely because major hydro infrastructure changes more slowly once built.
+
+### Interpretation
+
+After tidying, this dataset makes it possible to compare renewable capacity across both countries and energy sources. The summary tables and plots show which renewable technologies contribute the most total capacity, which countries have the largest totals, and how the overall capacity profile changes over time. The tidy structure makes all of these comparisons much more direct than in the original wide format.
+
+# Dataset 3 — GDP by Country (1960–2022)
+
+## Data Source
+
+Source: Kaggle, World GDP by Country (1960–2022). Raw CSV used in this project:
+
+```{r}
+gdp_url <- "https://raw.githubusercontent.com/suffyankhan77/Project2-DATA-607/refs/heads/main/GDP.csv"
+```
+
+## Data Structure Before Tidying
+
+```{r}
+gdp_raw <- read_csv(gdp_url)
+
+dim(gdp_raw)
+names(gdp_raw)
+glimpse(gdp_raw)
+gdp_raw %>% slice_head(n = 10)
+```
+
+The GDP dataset is wide because each year is stored as a separate column. This means the variable `year` is embedded in the column names instead of being represented as its own column.
+
+## Data Import and Tidying
+
+```{r}
+gdp_tidy <- gdp_raw %>%
+  pivot_longer(
+    cols = -c(`Country`, `Country Code`),
+    names_to = "year",
+    values_to = "gdp"
+  ) %>%
+  rename(
+    country = `Country`,
+    country_code = `Country Code`
+  ) %>%
+  rename_with(tolower) %>%
+  mutate(
+    year = as.integer(year)
+  ) %>%
+  filter(!is.na(gdp))
+
+glimpse(gdp_tidy)
+gdp_tidy %>% slice_head(n = 10)
+```
+
+### Missing and Inconsistent Value Handling
+
+For this dataset, the main structural issue is that years are spread across columns. I normalize the dataset by reshaping those years into a single `year` variable. Missing GDP values are removed after reshaping.
+
+```{r}
+gdp_tidy %>%
+  summarise(
+    rows_after_tidying = n(),
+    countries = n_distinct(country),
+    min_year = min(year),
+    max_year = max(year)
+  )
+```
+
+## Analytical Method
+
+The original discussion proposed comparing GDP growth between countries and visualizing economic trends. To address this, I select five major economies, visualize GDP trends over time, compare their average GDP values across the full period, and calculate a simple long run growth multiple using the first and last available GDP observations.
+
+## Analysis
+
+```{r}
+gdp_selected <- gdp_tidy %>%
+  filter(country %in% c("United States", "China", "Japan", "Germany", "India"))
+
+gdp_selected %>%
+  ggplot(aes(x = year, y = gdp, color = country)) +
+  geom_line(linewidth = 0.8) +
+  labs(
+    title = "GDP Trends for Selected Countries",
+    x = "Year",
+    y = "GDP (current US$)",
+    color = "Country"
+  ) +
+  scale_y_continuous(labels = label_dollar(scale_cut = cut_short_scale()))
+```
+
+This line chart compares GDP trajectories for five major economies. The United States remains the largest economy across the full period, while China shows especially rapid growth beginning in the later decades. India also shows strong upward growth, although from a lower starting point. The chart highlights both differences in scale and differences in long run growth patterns.
+
+Next, I calculate average GDP across the full period for selected countries.
+
+```{r}
+gdp_average <- gdp_selected %>%
+  group_by(country) %>%
+  summarise(
+    average_gdp = mean(gdp, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(average_gdp))
+
+gdp_average
+```
+
+The summary table above shows the average GDP of each selected country across the available years.
+
+```{r}
+gdp_average %>%
+  ggplot(aes(
+    x = reorder(country, average_gdp),
+    y = average_gdp
+  )) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Average GDP for Selected Countries",
+    x = "Country",
+    y = "Average GDP (current US$)"
+  ) +
+  scale_y_continuous(labels = label_dollar(scale_cut = cut_short_scale()))
+```
+
+This bar chart shows that the United States has the highest average GDP across the full period, followed by China and Japan. India has the lowest average among the selected countries, which reflects the fact that its strongest economic expansion occurred later in the series.
+
+To evaluate growth over time, I compare the first and last available GDP values for selected countries.
+
+```{r}
+gdp_growth <- gdp_selected %>%
+  group_by(country) %>%
+  summarise(
+    first_year = min(year),
+    last_year = max(year),
+    first_gdp = gdp[year == first_year][1],
+    last_gdp = gdp[year == last_year][1],
+    growth_multiple = last_gdp / first_gdp,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(growth_multiple))
+
+gdp_growth
+```
+
+The table above compares long-run GDP growth using a simple growth multiple from the first available year to the last available year for each selected country. This helps identify which countries experienced the greatest proportional increase over time.
+
+### Interpretation
+
+The tidy GDP dataset makes it straightforward to compare long-run economic trends across countries. The time-series graph shows differences in scale and growth trajectory, while the summary tables and bar chart highlight both average GDP size and long term growth multiples. This analysis demonstrates how reshaping the original wide dataset into tidy form supports clear economic comparison.
+
+# Conclusion
+
+This project transformed three real-world datasets from wide format into tidy format using reproducible `tidyr` and `dplyr` workflows.
+
+For the COVID-19 vaccination dataset, multiple vaccination measures were normalized into `metric` and `value` columns, making it possible to compare vaccination rates across countries and over time. For the renewable energy dataset, country and energy-type information embedded in column names were separated into explicit variables, allowing comparisons across technologies and countries. For the GDP dataset, yearly GDP columns were reshaped into a single `year` variable and a corresponding `gdp` value column, enabling cross-country economic trend analysis.
+
+Across all three cases, the tidy structure made the datasets easier to summarize, visualize, and interpret. This project demonstrates how reshaping wide data into tidy form is an essential step for reliable downstream analysis.
